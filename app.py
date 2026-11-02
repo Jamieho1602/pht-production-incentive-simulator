@@ -7,16 +7,12 @@ st.set_page_config(
 )
 
 st.title("🏭 PHT Production Incentive Simulator")
-st.markdown(
-    "### Interactive 3-Pillar Gainsharing Model: Production (150h) • QC (13h) •"
-    " Store (10h)"
-)
+st.markdown("### Interactive 3-Pillar Gainsharing Model with Performance Scenarios")
 
 # ==========================================
-# SIDEBAR INTERACTIVE INPUTS
+# SIDEBAR PARAMETERS & ACTUALS INPUTS
 # ==========================================
-st.sidebar.header("📊 Simulation Parameters")
-
+st.sidebar.header("📊 Production Volume")
 units = st.sidebar.slider(
     "Monthly Radiators Produced", min_value=80, max_value=200, value=150, step=5
 )
@@ -25,33 +21,44 @@ rate = st.sidebar.number_input(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.header("👥 Department Headcounts")
-prod_hc = st.sidebar.number_input(
-    "Production Headcount (Workers)", value=60, step=1
+st.sidebar.header("⏱️ Actual Hours vs Benchmarks")
+# Allowing simulation of below-target (leaner hours) or above-target (higher hours)
+prod_actual_h = st.sidebar.slider(
+    "Production Actual Hrs/Unit (Std: 150h)", 130.0, 165.0, 138.5, 0.5
 )
-qc_hc = st.sidebar.number_input(
-    "QC Headcount (Inspectors)", value=6, step=1
+qc_actual_h = st.sidebar.slider(
+    "QC Actual Hrs/Unit (Std: 13.0h)", 10.0, 18.0, 11.1, 0.1
 )
-store_hc = st.sidebar.number_input("Store Headcount (Handlers)", value=5, step=1)
+store_actual_h = st.sidebar.slider(
+    "Store Actual Hrs/Unit (Std: 10.0h)", 8.0, 16.0, 10.7, 0.1
+)
+
+st.sidebar.markdown("---")
+st.sidebar.header("👥 Headcounts")
+prod_hc = st.sidebar.number_input("Production Headcount", value=60)
+qc_hc = st.sidebar.number_input("QC Headcount", value=6)
+store_hc = st.sidebar.number_input("Store Headcount", value=5)
 
 # ==========================================
 # CALCULATIONS
 # ==========================================
-effective_rate = rate * 0.6  # 60% worker pool share
+effective_rate = rate * 0.6
 
-# 1. Production Floor (Std: 150h, Actual: 138.5h, Rework: 100h)
-prod_saved = max(0.0, (units * 150.0 - units * 138.5) - 100)
+# Production Pillar (Bench: 150h, minus 100h rework deduction)
+prod_saved = max(
+    0.0, (units * 150.0 - units * prod_actual_h) - 100
+)
 prod_pool_m = prod_saved * effective_rate
 prod_q_per_worker = (prod_pool_m * 3) / prod_hc if prod_hc > 0 else 0
 
-# 2. Quality Control (Std: 13h, Actual: 11.1h with 1.20 mult)
-qc_saved = max(0.0, (units * 13.0 - units * 11.1)) * 1.20
+# QC Pillar (Bench: 13.0h, with 1.20 multiplier)
+qc_saved = max(0.0, units * 13.0 - units * qc_actual_h) * 1.20
 qc_pool_m = qc_saved * effective_rate
 qc_q_per_worker = (qc_pool_m * 3) / qc_hc if qc_hc > 0 else 0
 
-# 3. Store Logistics (Std: 10h, Actual: 10.7h)
-store_saved = max(0.0, units * 10.0 - units * 10.7)
-store_pool_m = max(0.0, store_saved) * effective_rate
+# Store Pillar (Bench: 10.0h)
+store_saved = max(0.0, units * 10.0 - units * store_actual_h)
+store_pool_m = store_saved * effective_rate
 store_q_per_worker = (store_pool_m * 3) / store_hc if store_hc > 0 else 0
 
 total_quarterly_pool = (prod_pool_m + qc_pool_m + store_pool_m) * 3
@@ -60,7 +67,7 @@ total_annual_gain = (
 ) * 12
 
 # ==========================================
-# TOP EXECUTIVE METRICS
+# EXECUTIVE DASHBOARD
 # ==========================================
 col1, col2, col3 = st.columns(3)
 col1.metric("Monthly Output", f"{units} Units")
@@ -70,7 +77,7 @@ col2.metric(
 col3.metric("Annual Company Gain", f"RM {total_annual_gain:,.2f}")
 
 st.markdown("---")
-st.subheader("📊 Departmental Performance & Payout Breakdown (Quarterly)")
+st.subheader("📊 Departmental Performance & Scenario Breakdown")
 
 summary_df = pd.DataFrame({
     "Department": [
@@ -78,16 +85,15 @@ summary_df = pd.DataFrame({
         f"Quality Control ({qc_hc} inspectors)",
         f"Store Logistics ({store_hc} handlers)",
     ],
-    "Audited Benchmark": ["150.0h / unit", "13.0h / unit", "10.0h / unit"],
-    "Net Saved Hours (Monthly)": [
+    "Benchmark vs Actual": [
+        f"150.0h vs {prod_actual_h}h",
+        f"13.0h vs {qc_actual_h}h",
+        f"10.0h vs {store_actual_h}h",
+    ],
+    "Monthly Net Saved Hours": [
         f"{prod_saved:,.1f} hrs",
         f"{qc_saved:,.1f} hrs",
         f"{store_saved:,.1f} hrs",
-    ],
-    "Quarterly Pool (Dept)": [
-        f"RM {prod_pool_m * 3:,.2f}",
-        f"RM {qc_pool_m * 3:,.2f}",
-        f"RM {store_pool_m * 3:,.2f}",
     ],
     "Quarterly Payout / Worker": [
         f"RM {prod_q_per_worker:,.2f}",
