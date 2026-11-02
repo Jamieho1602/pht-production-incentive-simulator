@@ -1,4 +1,4 @@
-import numpy as np
+`import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -7,7 +7,9 @@ st.set_page_config(
 )
 
 st.title("🏭 PHT Tiered Production Incentive Simulator")
-st.markdown("### Multi-Tier Model with Separate Safety & Attendance Rewards")
+st.markdown(
+    "### Executive Gainsharing Dashboard: Efficiency, Safety & Attendance"
+)
 
 # ==========================================
 # SIDEBAR INPUTS
@@ -33,7 +35,7 @@ store_actual_h = st.sidebar.slider(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.header("🛡️ Safety & Attendance Rewards")
+st.sidebar.header("🛡️ Plant Compliance Controls")
 safety_achieved = st.sidebar.checkbox(
     "Zero Safety Incidents (Plant-wide)", value=True
 )
@@ -60,39 +62,39 @@ store_hc = st.sidebar.number_input("Store Headcount", value=5)
 # ==========================================
 def get_prod_tier(h):
   if h < 140.0:
-    return "Highest Reward (<140h)", 1.25, "✅ Tier 1"
+    return "Highest (<140h)", 1.25, "✅ Tier 1"
   elif 140.0 <= h <= 149.9:
-    return "Higher Reward (140-149.9h)", 1.00, "✅ Tier 2"
+    return "Higher (140-149.9h)", 1.00, "✅ Tier 2"
   elif h == 150.0:
-    return "Baseline Reward (150h)", 0.50, "✅ Baseline"
+    return "Baseline (150h)", 0.50, "✅ Baseline"
   elif 150.1 <= h <= 160.0:
-    return "Lesser Reward (150.1-160h)", 0.25, "⚠️ Tier 4"
+    return "Lesser (150.1-160h)", 0.25, "⚠️ Tier 4"
   else:
     return "No Reward (>160h)", 0.00, "❌ No Reward"
 
 
 def get_qc_tier(h):
   if h < 11.5:
-    return "Highest Reward (<11.5h)", 1.25, "✅ Tier 1"
+    return "Highest (<11.5h)", 1.25, "✅ Tier 1"
   elif 11.5 <= h <= 12.9:
-    return "Higher Reward (11.5-12.9h)", 1.00, "✅ Tier 2"
+    return "Higher (11.5-12.9h)", 1.00, "✅ Tier 2"
   elif h == 13.0:
-    return "Baseline Reward (13h)", 0.50, "✅ Baseline"
+    return "Baseline (13h)", 0.50, "✅ Baseline"
   elif 13.1 <= h <= 14.5:
-    return "Lesser Reward (13.1-14.5h)", 0.25, "⚠️ Tier 4"
+    return "Lesser (13.1-14.5h)", 0.25, "⚠️ Tier 4"
   else:
     return "No Reward (>14.5h)", 0.00, "❌ No Reward"
 
 
 def get_store_tier(h):
   if h < 9.0:
-    return "Highest Reward (<9h)", 1.25, "✅ Tier 1"
+    return "Highest (<9h)", 1.25, "✅ Tier 1"
   elif 9.0 <= h <= 9.9:
-    return "Higher Reward (9-9.9h)", 1.00, "✅ Tier 2"
+    return "Higher (9-9.9h)", 1.00, "✅ Tier 2"
   elif h == 10.0:
-    return "Baseline Reward (10h)", 0.50, "✅ Baseline"
+    return "Baseline (10h)", 0.50, "✅ Baseline"
   elif 10.1 <= h <= 11.5:
-    return "Lesser Reward (10.1-11.5h)", 0.25, "⚠️ Tier 4"
+    return "Lesser (10.1-11.5h)", 0.25, "⚠️ Tier 4"
   else:
     return "No Reward (>11.5h)", 0.00, "❌ No Reward"
 
@@ -168,17 +170,49 @@ annual_labour_savings = (
 ) * 12
 
 # ==========================================
-# DASHBOARD DISPLAY
+# DASHBOARD DISPLAY (SPACIOUS 2-ROW METRICS)
 # ==========================================
-st.markdown("### 🌐 Plant-Wide Summary")
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Monthly Output", f"{units} Units")
-c2.metric("Safety Status", "Achieved ✅" if safety_achieved else "Missed ❌")
-c3.metric("Total Quarterly Worker Pool", f"RM {total_quarterly_pool:,.2f}")
-c4.metric("Annual Labour Cost Savings", f"RM {annual_labour_savings:,.2f}")
+st.markdown("### 🌐 Plant-Wide Financial Summary")
+
+# Row 1 of metrics
+m1, m2 = st.columns(2)
+m1.metric("Monthly Radiator Output", f"{units} Units")
+m2.metric("Annual Labour Cost Savings", f"RM {annual_labour_savings:,.2f}")
+
+# Row 2 of metrics
+m3, m4 = st.columns(2)
+m3.metric("Total Quarterly Worker Pool", f"RM {total_quarterly_pool:,.2f}")
+m4.metric(
+    "Plant Compliance Status",
+    (
+        "Safety ✅ | Attendance ✅"
+        if (safety_achieved and attendance_achieved)
+        else "Check Compliance Settings ⚠️"
+    ),
+)
 
 st.markdown("---")
-st.markdown("### 📊 Departmental Tier & Detailed Payout Breakdown (Quarterly)")
+
+# ==========================================
+# SECTION 2: SAFETY & ATTENDANCE SUMMARY CARD
+# ==========================================
+st.markdown("### 🛡️ Monthly Compliance & Fixed Rewards Breakdown")
+col_s1, col_s2 = st.columns(2)
+with col_s1:
+  st.info(
+      f"**Safety Bonus:** {'Achieved (RM ' + str(safety_monthly_amt) + '/mo per worker)' if safety_achieved else 'Not Achieved (RM 0.00)'}"
+  )
+with col_s2:
+  st.info(
+      f"**Attendance Bonus:** {'Achieved (RM ' + str(attendance_monthly_amt) + '/mo per worker)' if attendance_achieved else 'Not Achieved (RM 0.00)'}"
+  )
+
+st.markdown("---")
+
+# ==========================================
+# SECTION 3: DEPARTMENTAL DETAILED BREAKDOWN TABLE
+# ==========================================
+st.markdown("### 📊 Departmental Tier & Detailed Quarterly Payouts")
 
 df = pd.DataFrame({
     "Department": [
@@ -191,23 +225,23 @@ df = pd.DataFrame({
         f"{qc_actual_h}h vs 13h",
         f"{store_actual_h}h vs 10h",
     ],
-    "Performance Tier": [prod_tier, qc_tier, store_tier],
-    "Gainsharing (RM)": [
+    "Tier": [prod_tier, qc_tier, store_tier],
+    "Gainsharing": [
         f"RM {prod_gain_per_worker:,.2f}",
         f"RM {qc_gain_per_worker:,.2f}",
         f"RM {store_gain_per_worker:,.2f}",
     ],
-    "Safety Bonus (RM)": [
+    "Safety": [
         f"RM {safety_q_per_worker:,.2f}",
         f"RM {safety_q_per_worker:,.2f}",
         f"RM {safety_q_per_worker:,.2f}",
     ],
-    "Attendance Bonus (RM)": [
+    "Attendance": [
         f"RM {attendance_q_per_worker:,.2f}",
         f"RM {attendance_q_per_worker:,.2f}",
         f"RM {attendance_q_per_worker:,.2f}",
     ],
-    "Total Payout / Worker": [
+    "Total / Worker": [
         f"RM {prod_total_worker:,.2f}",
         f"RM {qc_total_worker:,.2f}",
         f"RM {store_total_worker:,.2f}",
