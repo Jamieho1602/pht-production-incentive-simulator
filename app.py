@@ -7,7 +7,10 @@ st.set_page_config(
 )
 
 st.title("🏭 PHT Production Incentive Simulator")
-st.markdown("### Interactive 3-Pillar Gainsharing Model with Performance Scenarios")
+st.markdown(
+    "### Executive Gainsharing Dashboard: Plant-Wide Totals & Departmental"
+    " Breakdown"
+)
 
 # ==========================================
 # SIDEBAR PARAMETERS & ACTUALS INPUTS
@@ -22,7 +25,6 @@ rate = st.sidebar.number_input(
 
 st.sidebar.markdown("---")
 st.sidebar.header("⏱️ Actual Hours vs Benchmarks")
-# Allowing simulation of below-target (leaner hours) or above-target (higher hours)
 prod_actual_h = st.sidebar.slider(
     "Production Actual Hrs/Unit (Std: 150h)", 130.0, 165.0, 138.5, 0.5
 )
@@ -40,44 +42,57 @@ qc_hc = st.sidebar.number_input("QC Headcount", value=6)
 store_hc = st.sidebar.number_input("Store Headcount", value=5)
 
 # ==========================================
-# CALCULATIONS
+# CALCULATIONS (INDEPENDENT TEAM POOLS)
 # ==========================================
-effective_rate = rate * 0.6
+effective_rate = rate * 0.6  # 60% worker share
 
-# Production Pillar (Bench: 150h, minus 100h rework deduction)
+# 1. Production Floor
 prod_saved = max(
     0.0, (units * 150.0 - units * prod_actual_h) - 100
-)
+)  # 100h rework deduction
 prod_pool_m = prod_saved * effective_rate
 prod_q_per_worker = (prod_pool_m * 3) / prod_hc if prod_hc > 0 else 0
 
-# QC Pillar (Bench: 13.0h, with 1.20 multiplier)
+# 2. Quality Control
 qc_saved = max(0.0, units * 13.0 - units * qc_actual_h) * 1.20
 qc_pool_m = qc_saved * effective_rate
 qc_q_per_worker = (qc_pool_m * 3) / qc_hc if qc_hc > 0 else 0
 
-# Store Pillar (Bench: 10.0h)
+# 3. Store Logistics
 store_saved = max(0.0, units * 10.0 - units * store_actual_h)
 store_pool_m = store_saved * effective_rate
 store_q_per_worker = (store_pool_m * 3) / store_hc if store_hc > 0 else 0
 
-total_quarterly_pool = (prod_pool_m + qc_pool_m + store_pool_m) * 3
-total_annual_gain = (
-    (prod_saved + qc_saved + store_saved) * rate * 0.4
-) * 12
+# --- TIER 1: PLANT-WIDE TOTALS ---
+total_monthly_saved = prod_saved + qc_saved + store_saved
+total_quarterly_worker_pool = (
+    prod_pool_m + qc_pool_m + store_pool_m
+) * 3
+total_annual_company_gain = (total_monthly_saved * rate * 0.4) * 12
 
 # ==========================================
-# EXECUTIVE DASHBOARD
+# TOP TIER: EXECUTIVE PLANT-WIDE METRICS
 # ==========================================
-col1, col2, col3 = st.columns(3)
+st.markdown("### 🌐 Tier 1: Plant-Wide Financial Summary")
+col1, col2, col3, col4 = st.columns(4)
 col1.metric("Monthly Output", f"{units} Units")
 col2.metric(
-    "Total Quarterly Worker Pool", f"RM {total_quarterly_pool:,.2f}"
+    "Total Monthly Saved Hours", f"{total_monthly_saved:,.1f} hrs"
 )
-col3.metric("Annual Company Gain", f"RM {total_annual_gain:,.2f}")
+col3.metric(
+    "Total Quarterly Worker Pool",
+    f"RM {total_quarterly_worker_pool:,.2f}",
+)
+col4.metric(
+    "Annual Company P&L Gain", f"RM {total_annual_company_gain:,.2f}"
+)
 
 st.markdown("---")
-st.subheader("📊 Departmental Performance & Scenario Breakdown")
+
+# ==========================================
+# BOTTOM TIER: INDIVIDUAL DEPARTMENT BREAKDOWN
+# ==========================================
+st.markdown("### 📊 Tier 2: Individual Departmental Breakdown")
 
 summary_df = pd.DataFrame({
     "Department": [
@@ -90,15 +105,25 @@ summary_df = pd.DataFrame({
         f"13.0h vs {qc_actual_h}h",
         f"10.0h vs {store_actual_h}h",
     ],
-    "Monthly Net Saved Hours": [
+    "Net Saved Hours (Mth)": [
         f"{prod_saved:,.1f} hrs",
         f"{qc_saved:,.1f} hrs",
         f"{store_saved:,.1f} hrs",
+    ],
+    "Quarterly Pool (Dept)": [
+        f"RM {prod_pool_m * 3:,.2f}",
+        f"RM {qc_pool_m * 3:,.2f}",
+        f"RM {store_pool_m * 3:,.2f}",
     ],
     "Quarterly Payout / Worker": [
         f"RM {prod_q_per_worker:,.2f}",
         f"RM {qc_q_per_worker:,.2f}",
         f"RM {store_q_per_worker:,.2f}",
+    ],
+    "Performance Status": [
+        ("✅ Achieved" if prod_saved > 0 else "❌ Missed Target"),
+        ("✅ Achieved" if qc_saved > 0 else "❌ Missed Target"),
+        ("✅ Achieved" if store_saved > 0 else "❌ Missed Target"),
     ],
 })
 
