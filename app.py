@@ -68,7 +68,7 @@ total_monthly_saved = prod_saved + qc_saved + store_saved
 total_quarterly_worker_pool = (
     prod_pool_m + qc_pool_m + store_pool_m
 ) * 3
-total_annual_company_gain = (total_monthly_saved * rate * 0.4) * 12
+total_annual_labour_savings = (total_monthly_saved * rate * 0.4) * 12
 
 # ==========================================
 # TOP TIER: EXECUTIVE PLANT-WIDE METRICS
@@ -84,7 +84,7 @@ col3.metric(
     f"RM {total_quarterly_worker_pool:,.2f}",
 )
 col4.metric(
-    "Annual Company P&L Gain", f"RM {total_annual_company_gain:,.2f}"
+    "Annual Labour Cost Savings", f"RM {total_annual_labour_savings:,.2f}"
 )
 
 st.markdown("---")
